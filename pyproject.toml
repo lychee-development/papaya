@@ -1,6 +1,14 @@
-# pyproject.toml
-
-[build-system]
-requires = ["setuptools>=42", "wheel"]
-build-backend = "setuptools.build_meta"
-requires-python = '>=3.11'
+[project]
+name = "papaya"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.12",
+    "fastmcp>=2.1.2",
+    "httpx>=0.28.1",
+    "pydantic>=2.11.3",
+    "python-multipart>=0.0.20",
+    "uvicorn>=0.34.1",
+]
