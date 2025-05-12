@@ -356,7 +356,6 @@ def send_webhook(data):
     except Exception as e:
         logger.error(f"Error sending webhook: {e}")
         return False
-
 def check_and_update_app(app_id):
     """Check application state and send webhook if changed"""
     try:
@@ -382,12 +381,46 @@ def check_and_update_app(app_id):
             # Save the new state
             config["app_states"][app_id] = app_state
             
+            # Create a simplified payload with just the failure information
+            simplified_failure_info = {
+                "app_id": app_id,
+                "app_name": app_name,
+                "timestamp": app_state.get("timestamp"),
+                "has_failures": app_state.get("has_failures", False),
+                "is_completed": app_state.get("is_completed", False)
+            }
+            
+            # Only include failure information if there are failures
+            if app_state.get("has_failures", False):
+                # Add failure details
+                if app_state.get("has_failed_jobs", False):
+                    simplified_failure_info["has_failed_jobs"] = True
+                    simplified_failure_info["failed_jobs_details"] = app_state.get("failed_jobs_details", [])
+                
+                if app_state.get("has_failed_stages", False):
+                    simplified_failure_info["has_failed_stages"] = True
+                    simplified_failure_info["failed_stages_details"] = app_state.get("failed_stages_details", [])
+                
+                if app_state.get("task_failure_count", 0) > 0:
+                    simplified_failure_info["task_failure_count"] = app_state.get("task_failure_count", 0)
+                    simplified_failure_info["task_failures"] = app_state.get("task_failures", [])
+                
+                if app_state.get("has_executor_failures", False):
+                    simplified_failure_info["executor_failure_count"] = app_state.get("executor_failure_count", 0)
+                    simplified_failure_info["has_executor_failures"] = True
+                
+                if app_state.get("application_exception"):
+                    simplified_failure_info["application_exception"] = app_state.get("application_exception")
+                
+                if app_state.get("application_failed", False):
+                    simplified_failure_info["application_failed"] = True
+                    simplified_failure_info["application_end_reason"] = app_state.get("application_end_reason", "Unknown")
+            
             # Create the webhook payload
             payload = {
-                "message": "hello world",
                 "event_type": "application_state_change",
                 "is_new_app": is_new,
-                "app_state": app_state
+                "failures": simplified_failure_info
             }
             
             # Send to webhook
@@ -404,11 +437,19 @@ def check_and_update_app(app_id):
             # Save the new state
             config["app_states"][app_id] = app_state
             
+            # Create a simplified failure information
+            simplified_info = {
+                "app_id": app_id,
+                "app_name": app_name,
+                "timestamp": app_state.get("timestamp"),
+                "has_failures": app_state.get("has_failures", False),
+                "is_completed": app_state.get("is_completed", False)
+            }
+            
             # Create the webhook payload
             payload = {
-                "message": "hello world",
                 "event_type": "application_initial_state",
-                "app_state": app_state
+                "failures": simplified_info
             }
             
             # Send to webhook
@@ -423,7 +464,6 @@ def check_and_update_app(app_id):
     except Exception as e:
         logger.error(f"Error checking application {app_id}: {e}")
         return False
-
 def monitor_loop():
     """Main monitoring loop"""
     logger.info(f"Starting comprehensive state monitoring for Spark UI at {config['spark_ui_url']}")
@@ -447,13 +487,34 @@ def monitor_loop():
                             final_state["final_status"] = "FAILED_OR_ABRUPTLY_ENDED"
                             final_state["end_time"] = time.time()
                             final_state["has_failures"] = True
-                            
-                            payload = {
-                                "message": "hello world",
-                                "event_type": "application_failed",
-                                "app_state": final_state
+
+                            # Create simplified failure info
+                            simplified_failure_info = {
+                                "app_id": app_id,
+                                "app_name": app_state.get("app_info", {}).get("name", "Unknown"),
+                                "timestamp": time.time(),
+                                "final_status": "FAILED_OR_ABRUPTLY_ENDED",
+                                "has_failures": True
                             }
-                            
+
+                            # Add specific failure details if available
+                            if "has_failed_jobs" in app_state and app_state["has_failed_jobs"]:
+                                simplified_failure_info["has_failed_jobs"] = True
+                                simplified_failure_info["failed_jobs_details"] = app_state.get("failed_jobs_details", [])
+
+                            if "has_failed_stages" in app_state and app_state["has_failed_stages"]:
+                                simplified_failure_info["has_failed_stages"] = True
+                                simplified_failure_info["failed_stages_details"] = app_state.get("failed_stages_details", [])
+
+                            if "task_failure_count" in app_state and app_state["task_failure_count"] > 0:
+                                simplified_failure_info["task_failure_count"] = app_state["task_failure_count"]
+                                simplified_failure_info["task_failures"] = app_state.get("task_failures", [])
+
+                            payload = {
+                                "event_type": "application_failed",
+                                "failures": simplified_failure_info
+                            }
+
                             send_webhook(payload)
                             
                             # Remove from tracked apps
