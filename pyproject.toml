@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.16.1",
+    "pandas>=2.3.0",
     "psycopg2-binary>=2.9.10",
     "pydantic>=2.11.5",
     "python-dotenv>=1.1.0",
@@ -19,12 +20,12 @@ dependencies = [
 markers = [
     "config: Tests for configuration parsing and validation",
     "diffing: Tests for state diffing (desired vs actual)",
-    "planning: Tests for plan generation and management", 
+    "planning: Tests for plan generation and management",
     "apply: Tests for apply/sync operations",
     "cli: Tests for CLI interface",
     "connection: Tests for database connection validation",
-    "integration: Database integration tests", 
-    "slow: Slow running tests"
+    "integration: Database integration tests",
+    "slow: Slow running tests",
 ]
 
 [project.optional-dependencies]
